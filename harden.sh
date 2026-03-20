@@ -268,8 +268,10 @@ apply_privacy_settings() {
     adb shell settings put secure lock_screen_allow_private_notifications 0 && log "Disabled: Private notification content on lock screen"
 
     # --- Restrict Background Data ---
-    echo -e "\n${BOLD}Network restrictions:${NC}"
-    adb shell cmd netpolicy set restrict-background true && log "Enabled: Restrict background data"
+    # NOTE: restrict-background can break app functionality (emulator downloads,
+    # launcher sync, etc). Disabled by default. Uncomment if you want it.
+    # echo -e "\n${BOLD}Network restrictions:${NC}"
+    # adb shell cmd netpolicy set restrict-background true && log "Enabled: Restrict background data"
 
     # --- Disable ADB over WiFi (security) ---
     echo -e "\n${BOLD}Security hardening:${NC}"

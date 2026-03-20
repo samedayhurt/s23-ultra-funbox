@@ -186,22 +186,50 @@ adb install daijisho.apk
 
 ### Set Daijisho as Default Launcher
 
-1. On the phone, press the **Home** button
-2. Select **Daijishou** from the launcher picker
-3. Tap **Always**
-
-Or via ADB:
+Via ADB:
 ```bash
-adb shell cmd package set-home-activity com.magneticchen.daijishou/.MainActivity
+adb shell cmd package set-home-activity com.magneticchen.daijishou/.activities.BootstrapActivity
 ```
 
-### Configure Daijisho
+### Grant Storage Permission
 
+Daijisho uses Android's Storage Access Framework. Grant read permission via ADB:
+```bash
+adb shell pm grant com.magneticchen.daijishou android.permission.READ_EXTERNAL_STORAGE
+```
+
+### Configure Platforms
+
+The `setup.sh` script downloads platform configs from the [Daijisho GitHub](https://github.com/TapiocaFox/Daijishou/tree/main/platforms) and pushes them to `/sdcard/Daijishou/platforms/`. To load them:
+
+**Method A - Download from built-in index (easiest):**
 1. Open Daijisho
-2. Go to **Settings > Platforms**
-3. Add each platform and point it to the corresponding `/sdcard/ROMs/<system>` directory
-4. Set the emulator for each platform (e.g., PSP -> PPSSPP, GameCube -> Dolphin)
-5. Scan for games
+2. Tap the **menu icon** (top-right) > **Manage Platforms**
+3. Tap **+** > **Download from Index**
+4. Download each system you want (NES, SNES, PS2, etc.)
+5. For each platform, tap it > **Sync Paths** > **Add** > browse to `/sdcard/ROMs/<system>/`
+6. Tap **Sync** to scan for games
+
+**Method B - Import from file:**
+1. Open Daijisho > **Manage Platforms** > **+** > **Import from file**
+2. Browse to `/sdcard/Daijishou/platforms/`
+3. Select a platform JSON (e.g., `SonyPlayStation2.json`)
+4. Set the Sync Path to the matching ROM folder
+
+### Platform-to-Emulator Mapping
+
+Each platform config already includes launch intents for the correct emulator. The configs reference these package names:
+
+| Platform | Default Emulator | Package |
+|----------|-----------------|---------|
+| NES / SNES / GB / GBA / N64 / DS / Genesis | RetroArch | `com.retroarch.aarch64` |
+| PSX (PS1) | RetroArch (Beetle PSX) | `com.retroarch.aarch64` |
+| PS2 | NetherSX2 / AetherSX2 | `xyz.aethersx2.android` |
+| PSP | PPSSPP | `org.ppsspp.ppsspp` |
+| GameCube / Wii | Dolphin | `org.dolphinemu.dolphinemu` |
+| Dreamcast | Flycast | `com.flycast.emulator` |
+| 3DS | Azahar / Lime3DS | `io.github.lime3ds.android` |
+| Switch | Citron | `org.citron.citron_emu` |
 
 ---
 

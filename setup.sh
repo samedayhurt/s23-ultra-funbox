@@ -401,8 +401,40 @@ set_launcher() {
     header "Phase 6: Setting Daijisho as Default Launcher"
 
     if adb shell pm list packages 2>/dev/null | grep -q "com.magneticchen.daijishou"; then
-        adb shell cmd package set-home-activity com.magneticchen.daijishou/.MainActivity 2>&1
+        # Set as default launcher
+        adb shell cmd package set-home-activity com.magneticchen.daijishou/.activities.BootstrapActivity 2>&1
         log "Default launcher set to Daijisho"
+
+        # Grant storage permission
+        adb shell pm grant com.magneticchen.daijishou android.permission.READ_EXTERNAL_STORAGE 2>/dev/null
+
+        # Download and push platform configs from Daijisho GitHub
+        log "Downloading Daijisho platform configs..."
+        local platforms_dir="/tmp/daijisho_platforms_$$"
+        mkdir -p "$platforms_dir"
+        local BASE="https://raw.githubusercontent.com/TapiocaFox/Daijishou/main/platforms"
+        local platform_count=0
+        for platform in \
+            NintendoEntertainmentSystem SuperNintendoEntertainmentSystem \
+            NintendoGameBoy NintendoGameBoyColor NintendoGameBoyAdvance \
+            Nintendo64 NintendoDS Nintendo3DS NintendoGameCube \
+            NintendoWii NintendoSwitch SonyPlayStation SonyPlayStation2 \
+            PlayStationPortable Dreamcast SegaGenesis SegaMasterSystem SegaSaturn; do
+            if wget -q "$BASE/$platform.json" -O "$platforms_dir/$platform.json" 2>/dev/null; then
+                ((platform_count++))
+            fi
+        done
+        adb shell mkdir -p /sdcard/Daijishou/platforms 2>/dev/null
+        adb push "$platforms_dir/" /sdcard/Daijishou/platforms/ 2>/dev/null
+        rm -rf "$platforms_dir"
+        log "Pushed $platform_count platform configs to /sdcard/Daijishou/platforms/"
+        log ""
+        log "IMPORTANT: To activate platforms in Daijisho:"
+        log "  1. Open Daijisho > top-right menu > 'Manage Platforms'"
+        log "  2. Tap '+' > 'Download from Index'"
+        log "  3. Download each system you want"
+        log "  4. For each platform, tap it > 'Sync Paths' > add /sdcard/ROMs/<system>"
+        log "  OR: Import from file > browse to /sdcard/Daijishou/platforms/"
     else
         warn "Daijisho not installed - skipping launcher setup"
     fi
