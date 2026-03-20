@@ -1,285 +1,273 @@
-# Samsung Galaxy S23 Ultra - Kid-Friendly Emulation Box Setup Guide
+# Samsung Galaxy S23 Ultra - Kid-Friendly Emulation Box
 
-Turn a Samsung Galaxy S23 Ultra into a dedicated, privacy-hardened emulation and gaming device for kids. This guide removes Samsung bloatware, strips tracking/telemetry, installs emulators for 17+ retro systems (including Nintendo Switch), adds kid-friendly apps, and configures a game launcher as the home screen.
+Turn a Samsung Galaxy S23 Ultra into a dedicated, privacy-hardened emulation and gaming device for kids. Removes Samsung bloatware, strips tracking/telemetry, installs emulators for 17+ retro systems (including Nintendo Switch and PS2), streams PC games via Steam Link, and configures a retro game launcher as the home screen.
 
-**Three scripts, one command each:**
-- `setup.sh` - Full setup: debloat, download emulators, install, configure launcher
-- `harden.sh` - Privacy hardening: remove trackers, configure DNS, lock down telemetry
-- `debloat.sh` - Standalone debloat script (subset of setup.sh)
+## Quick Start
+
+```bash
+git clone https://github.com/samedayhurt/s23-ultra-funbox.git
+cd s23-ultra-funbox
+
+# Enable USB Debugging on the phone first (see below), then:
+./setup.sh          # Debloat + install emulators + configure launcher
+./harden.sh         # Strip tracking, configure private DNS, disable telemetry
+```
+
+### What's In the Box
+
+| Script | What It Does |
+|--------|-------------|
+| `setup.sh` | Full automated setup: debloat, download & install all emulators/apps, create ROM directories, set Daijisho as launcher, apply performance tweaks |
+| `harden.sh` | Privacy hardening: remove 27+ tracking packages, configure DNS-over-TLS, disable Samsung/Google analytics, lock down telemetry |
+| `debloat.sh` | Standalone debloat-only script (subset of setup.sh) |
+
+Each script supports flags for running individual phases. Run with `--help` for options.
+
+---
 
 ## Prerequisites
 
 - Samsung Galaxy S23 Ultra (Snapdragon 8 Gen 2)
-- USB cable (USB-C)
+- USB-C data cable (not charge-only)
 - Computer with ADB installed
 - USB Debugging enabled on the phone
 
 ### Enable USB Debugging
 
-1. Go to **Settings > About phone**
-2. Tap **Build number** 7 times to unlock Developer Options
-3. Go to **Settings > Developer options**
-4. Enable **USB debugging**
-5. Connect the phone via USB and tap **Allow** on the debugging prompt
-6. Set USB mode to **File Transfer / MTP**
-
-### Verify Connection
+1. **Settings > About phone** - tap **Build number** 7 times
+2. **Settings > Developer options** - enable **USB debugging**
+3. Connect via USB, tap **Allow** on the debugging prompt (check "Always allow")
+4. Set USB mode to **File Transfer / MTP**
 
 ```bash
-adb devices
+adb devices   # Should show your device serial
 ```
-
-You should see your device serial (e.g., `R5CX3162VNW	device`).
 
 ---
 
-## Phase 1: Debloat Samsung
+## Phase 1: Debloat Samsung (112 packages)
 
-We use `pm uninstall -k --user 0` which safely disables packages for the current user without touching the system partition. This is **fully reversible via factory reset**.
+Uses `pm uninstall -k --user 0` - safe, user-level only, **fully reversible via factory reset**.
 
-### What Gets Removed (129 packages)
+```bash
+./debloat.sh
+# or: ./setup.sh --debloat-only
+```
+
+### What Gets Removed
 
 | Category | Examples |
 |----------|----------|
-| **Facebook** | Facebook, Facebook Services, Facebook App Manager |
-| **Microsoft** | OneDrive, Microsoft App Manager |
-| **Bixby** | Bixby Agent, Bixby Wakeup, Bixby Vision |
-| **Samsung Apps** | Samsung Browser, Samsung Pay, Samsung Cloud, Samsung Calendar, Galaxy Store, Samsung Video, AR Zone, AR Emoji, AR Drawing, Game Launcher, Galaxy Themes |
-| **Samsung Smart Features** | Smart Suggestions, Smart Call, Smart Face, Smart Mirroring |
-| **Knox/Secure Folder** | Knox Analytics, Knox Container, Secure Folder, KLMS Agent |
-| **Samsung Misc** | Tips, Safety Information, Samsung Members, Kids Mode, Device Security, Update Center, Easy Setup |
-| **TTS Languages** | 12 non-English TTS language packs |
-| **Google Bloat** | Google Assistant, Android Auto, Google Maps, Google Duo, Feedback, Wellbeing |
+| **Facebook** | Facebook, Facebook Services, App Manager |
+| **Microsoft** | OneDrive, App Manager |
+| **Bixby** | Agent, Wakeup, Vision, Settings |
+| **Samsung Apps** | Browser, Pay, Cloud, Calendar, Galaxy Store, Video, AR Zone/Emoji/Drawing, Game Launcher, Themes, Tips, Members, Kids Mode |
+| **Samsung Smart** | Smart Suggestions, Smart Call, Smart Face, Smart Mirroring |
+| **Knox** | Analytics, Container, Secure Folder, KLMS Agent |
+| **TTS Languages** | 12 non-English language packs |
+| **Google Bloat** | Assistant, Android Auto, Maps, Duo, Feedback |
 
 ### What We Keep
 
-- Samsung Dialer & Contacts (phone still works)
-- Samsung Camera (best camera app for the hardware)
-- Samsung Keyboard (Honeyboard)
-- Samsung DeX (for monitor/TV output gaming)
-- Core system services (connectivity, WiFi, Bluetooth, NFC)
-- Google Play Store & Google Play Services
-- Google Chrome
+- Phone/Contacts, Camera, Keyboard, **Samsung DeX** (for monitor gaming)
+- Core system services, WiFi, Bluetooth, NFC
+- Google Play Store & Play Services, Chrome
+- **`com.google.android.ext.services`** (required system service - see [Known Issues](#known-issues))
 
-### Run the Debloat Script
-
-```bash
-chmod +x debloat.sh
-bash debloat.sh
-```
-
-Expected output: ~112 removed, ~16 skipped (not present), ~1 failed (protected).
-
-### Restore a Package (if needed)
+### Restore Any Package
 
 ```bash
 adb shell cmd package install-existing <package.name>
 ```
 
-Example - restore Samsung Calendar:
-```bash
-adb shell cmd package install-existing com.samsung.android.calendar
-```
+---
+
+## Phase 2: App Stores
+
+| App | Source | Purpose |
+|-----|--------|---------|
+| **Aurora Store** | [F-Droid](https://f-droid.org/repo/com.aurora.store_73.apk) | Anonymous Google Play access |
+| **F-Droid** | [f-droid.org](https://f-droid.org/F-Droid.apk) | Open source app store |
 
 ---
 
-## Phase 2: Install App Stores
+## Phase 3: Emulators
 
-### Aurora Store (Anonymous Google Play Access)
-```bash
-wget "https://f-droid.org/repo/com.aurora.store_73.apk" -O aurora-store.apk
-adb install aurora-store.apk
-```
+### Installed Emulators
 
-### F-Droid (Open Source App Store)
-```bash
-wget "https://f-droid.org/F-Droid.apk" -O f-droid.apk
-adb install f-droid.apk
-```
-
----
-
-## Phase 3: Install Emulators
-
-### Multi-System
-
-| App | Systems | Source |
-|-----|---------|--------|
-| **RetroArch** | NES, SNES, GB, GBC, GBA, Genesis, Master System, Saturn, N64, DS, PSX, Dreamcast, and more | [buildbot.libretro.com](https://buildbot.libretro.com/stable/) |
-| **Lemuroid** | NES, SNES, GB, GBC, GBA, Genesis, N64, DS, PSX, Atari (simpler UI than RetroArch) | [GitHub](https://github.com/Swordfish90/Lemuroid/releases) |
-
-```bash
-wget "https://buildbot.libretro.com/stable/1.22.2/android/RetroArch_aarch64.apk" -O retroarch.apk
-wget -L "https://github.com/Swordfish90/Lemuroid/releases/download/1.16.2/lemuroid-app-free-dynamic-release.apk" -O lemuroid.apk
-adb install retroarch.apk
-adb install lemuroid.apk
-```
-
-### Standalone Emulators (Better Performance)
-
-| App | System | Source |
-|-----|--------|--------|
+| App | System(s) | Source |
+|-----|-----------|--------|
+| **RetroArch** | NES, SNES, GB/GBC/GBA, Genesis, Master System, Saturn, N64, DS, PSX, Dreamcast, + more | [buildbot.libretro.com](https://buildbot.libretro.com/stable/) |
+| **Lemuroid** | Same as above (simpler UI) | [GitHub](https://github.com/Swordfish90/Lemuroid/releases) |
 | **PPSSPP** | PSP | [ppsspp.org](https://www.ppsspp.org/download/) |
 | **Dolphin** | GameCube / Wii | [dolphin-emu.org](https://dolphin-emu.org/download/) |
-| **NetherSX2** | PS2 | Community builds (not officially distributed) |
+| **NetherSX2** | PS2 | Community builds |
 | **Azahar (Lime3DS)** | Nintendo 3DS | [GitHub](https://github.com/azahar-emu/azahar/releases) |
 | **Flycast** | Dreamcast / Naomi | [GitHub](https://github.com/flyinghead/flycast/releases) |
 | **Citron** | Nintendo Switch | [git.citron-emu.org](https://git.citron-emu.org/citron-emu/Citron/releases) |
 
-```bash
-wget "https://www.ppsspp.org/files/1_20_3/ppsspp.apk" -O ppsspp.apk
-wget -L "https://dl.dolphin-emu.org/releases/2603a/dolphin-2603a.apk" -O dolphin.apk
-wget -L "https://github.com/azahar-emu/azahar/releases/download/2124.3/azahar-2124.3-android-vanilla.apk" -O azahar-3ds.apk
-wget -L "https://github.com/flyinghead/flycast/releases/download/v2.6/flycast-2.6.apk" -O flycast.apk
-wget -L "https://git.citron-emu.org/citron-emu/Citron/releases/download/2026.03.12/app-mainline-release.apk" -O citron-switch.apk
+### Performance Chart (Snapdragon 8 Gen 2)
 
-adb install ppsspp.apk
-adb install dolphin.apk
-adb install azahar-3ds.apk
-adb install flycast.apk
-adb install citron-switch.apk
-adb install NetherSX2.apk  # Provide your own APK
-```
-
-> **Note on Switch emulation:** Citron requires `prod.keys` and firmware files dumped from your own Nintendo Switch console. Place them in the Citron app's data directory. Without these files, games will not boot.
-
-### Emulator Compatibility Chart (S23 Ultra - Snapdragon 8 Gen 2)
-
-| System | Performance | Recommended App |
-|--------|-------------|-----------------|
+| System | Performance | Best Emulator |
+|--------|-------------|---------------|
 | NES / SNES / GB / GBC / GBA | Perfect | Lemuroid or RetroArch |
 | Sega Genesis / Master System | Perfect | Lemuroid or RetroArch |
-| N64 | Perfect | RetroArch (Mupen64Plus core) |
+| N64 | Perfect | RetroArch (Mupen64Plus) |
 | Nintendo DS | Perfect | Lemuroid or RetroArch |
-| PSX (PS1) | Perfect | RetroArch (Beetle PSX HW core) |
+| PSX (PS1) | Perfect | RetroArch (Beetle PSX HW) |
 | Dreamcast | Perfect | Flycast |
 | PSP | Perfect | PPSSPP |
-| GameCube | Great (most games) | Dolphin |
+| GameCube | Great | Dolphin |
 | Wii | Good-Great | Dolphin |
-| PS2 | Good (many games) | NetherSX2 |
-| 3DS | Good (many games) | Azahar / Lime3DS |
-| Switch | Playable (many games) | Citron (requires keys + firmware from your Switch) |
+| PS2 | Good (most games) | NetherSX2 |
+| 3DS | Good (most games) | Azahar / Lime3DS |
+| Switch | Playable (many games) | Citron |
+
+### BIOS Files
+
+Some emulators require BIOS files dumped from your own hardware:
+
+| Emulator | System | BIOS Needed | Location on Device |
+|----------|--------|-------------|-------------------|
+| **NetherSX2** | PS2 | `scph39001.bin` (US) or any PS2 BIOS | `/sdcard/BIOS/PS2/` - app prompts on first launch |
+| **Flycast** | Dreamcast | `dc_boot.bin`, `dc_flash.bin` | `/sdcard/flycast/data/` |
+| **RetroArch** (PSX) | PS1 | `scph5501.bin` | `/sdcard/RetroArch/system/` |
+| **Citron** | Switch | `prod.keys` + firmware `.nca` files | `/sdcard/citron/keys/` and `/sdcard/citron/nand/system/Contents/registered/` |
+| **Azahar** | 3DS | AES keys (app prompts) | Configured in-app |
+
+**No BIOS needed:** RetroArch (most cores), Lemuroid, PPSSPP, Dolphin
+
+Push BIOS files via ADB:
+```bash
+adb push scph39001.bin /sdcard/BIOS/PS2/
+adb push dc_boot.bin /sdcard/flycast/data/
+adb push dc_flash.bin /sdcard/flycast/data/
+adb push scph5501.bin /sdcard/RetroArch/system/
+adb push prod.keys /sdcard/citron/keys/
+adb push firmware/*.nca /sdcard/citron/nand/system/Contents/registered/
+```
 
 ---
 
 ## Phase 4: Kid-Friendly Apps
 
-### Minecraft
-```bash
-adb install minecraft.apk  # Provide your own APK
-```
-
-### YouTube Kids
-- Download from Aurora Store or Google Play Store on the device
-- Or download APK from [APKMirror](https://www.apkmirror.com/apk/google-inc/youtube-kids/) (manual download required - split APK)
+| App | Install Method |
+|-----|---------------|
+| **Minecraft** | `adb install minecraft.apk` (provide your own) |
+| **YouTube Kids** | Install from Aurora Store or Google Play on device |
+| **Steam Link** | Install from Google Play: `adb shell am start -a android.intent.action.VIEW -d "market://details?id=com.valvesoftware.steamlink"` |
 
 ---
 
-## Phase 5: Game Launcher (Daijisho)
+## Phase 5: Steam Gaming
 
-Daijisho is a retro game launcher that can be set as your home screen, giving the device a console-like feel.
+### Steam Link (Stream from Gaming PC)
+
+Stream your full Steam library. The PC renders, the phone displays. Zero performance overhead.
+
+1. Install Steam Link from Google Play (see above)
+2. Both devices on the same network (5GHz WiFi or wired via DeX dock)
+3. Steam running on the PC
+4. Pair a Bluetooth controller
+
+Works great with Samsung DeX on a monitor.
+
+### Winlator (Run x86 Windows Games Locally)
+
+[Winlator](https://github.com/brunodev85/winlator) translates Windows x86/x64 games to ARM using Wine + Box86/Box64. No PC required.
 
 ```bash
-wget -L "https://github.com/TapiocaFox/Daijishou/releases/download/v1.5.0/416.apk" -O daijisho.apk
-adb install daijisho.apk
+wget -L "https://github.com/brunodev85/winlator/releases/download/v10.1.0/Winlator_10.1.apk" -O winlator.apk
+adb install winlator.apk
 ```
 
-### Set Daijisho as Default Launcher
+**Runs well:** Pre-2015 titles, Source engine (HL2, Portal), indie games, GOG classics
+**Won't run well:** Modern AAA, heavy GPU games, aggressive DRM
 
-Via ADB:
+> **Valve's ARM future:** Valve is developing **FEX** (x86-to-ARM translation) and **SteamOS for ARM** for the Steam Frame (2026). This may eventually work on other ARM devices.
+
+---
+
+## Phase 6: Game Launcher (Daijisho)
+
+[Daijisho](https://github.com/TapiocaFox/Daijishou) is a retro game launcher set as the home screen.
+
 ```bash
+# Set as default launcher
 adb shell cmd package set-home-activity com.magneticchen.daijishou/.activities.BootstrapActivity
-```
 
-### Grant Storage Permission
-
-Daijisho uses Android's Storage Access Framework. Grant read permission via ADB:
-```bash
+# Grant storage access
 adb shell pm grant com.magneticchen.daijishou android.permission.READ_EXTERNAL_STORAGE
 ```
 
-### Configure Platforms
+### Adding Game Systems to Daijisho
 
-The `setup.sh` script downloads platform configs from the [Daijisho GitHub](https://github.com/TapiocaFox/Daijishou/tree/main/platforms) and pushes them to `/sdcard/Daijishou/platforms/`. To load them:
+Daijisho requires manual platform setup through its UI:
 
-**Method A - Download from built-in index (easiest):**
-1. Open Daijisho
-2. Tap the **menu icon** (top-right) > **Manage Platforms**
-3. Tap **+** > **Download from Index**
-4. Download each system you want (NES, SNES, PS2, etc.)
-5. For each platform, tap it > **Sync Paths** > **Add** > browse to `/sdcard/ROMs/<system>/`
-6. Tap **Sync** to scan for games
-
-**Method B - Import from file:**
-1. Open Daijisho > **Manage Platforms** > **+** > **Import from file**
-2. Browse to `/sdcard/Daijishou/platforms/`
-3. Select a platform JSON (e.g., `SonyPlayStation2.json`)
-4. Set the Sync Path to the matching ROM folder
+1. Open Daijisho on the phone
+2. Tap **three-dot menu** (top-right) > **"Manage Platforms"**
+3. Tap **+** > **"Download from Index"**
+4. Download each system you want (e.g., "Sony PlayStation 2", "Nintendo Entertainment System")
+5. Tap the downloaded platform > **"Sync Paths"** > **+**
+6. Browse to the matching folder: **Internal Storage > ROMs > PS2** (or NES, SNES, etc.)
+7. Tap **Sync** to scan for games
+8. Repeat for each system
 
 ### Platform-to-Emulator Mapping
 
-Each platform config already includes launch intents for the correct emulator. The configs reference these package names:
+Each platform config includes launch intents for the correct emulator:
 
 | Platform | Default Emulator | Package |
 |----------|-----------------|---------|
 | NES / SNES / GB / GBA / N64 / DS / Genesis | RetroArch | `com.retroarch.aarch64` |
 | PSX (PS1) | RetroArch (Beetle PSX) | `com.retroarch.aarch64` |
-| PS2 | NetherSX2 / AetherSX2 | `xyz.aethersx2.android` |
+| PS2 | NetherSX2 | `xyz.aethersx2.android` |
 | PSP | PPSSPP | `org.ppsspp.ppsspp` |
 | GameCube / Wii | Dolphin | `org.dolphinemu.dolphinemu` |
 | Dreamcast | Flycast | `com.flycast.emulator` |
 | 3DS | Azahar / Lime3DS | `io.github.lime3ds.android` |
 | Switch | Citron | `org.citron.citron_emu` |
 
+### Revert to Samsung Launcher
+
+```bash
+adb shell cmd package set-home-activity com.sec.android.app.launcher/.activities.LauncherActivity
+```
+
 ---
 
-## Phase 6: ROM Directory Structure
-
-ROMs go in `/sdcard/ROMs/` on the device:
+## Phase 7: ROM Directory Structure
 
 ```
 /sdcard/ROMs/
-├── 3DS/
-├── Dreamcast/
-├── GB/
-├── GBA/
-├── GBC/
-├── GameCube/
-├── Genesis/
-├── MasterSystem/
+├── 3DS/        ├── NDS/        ├── PSX/
+├── Dreamcast/  ├── NES/        ├── SNES/
+├── GB/         ├── PS2/        ├── Saturn/
+├── GBA/        ├── PSP/        ├── Switch/
+├── GBC/        ├── GameCube/   └── Wii/
+├── Genesis/    ├── MasterSystem/
 ├── N64/
-├── NDS/
-├── NES/
-├── PS2/
-├── PSP/
-├── PSX/
-├── SNES/
-├── Saturn/
-├── Switch/
-└── Wii/
 ```
-
-### Transfer ROMs via ADB
 
 ```bash
-adb push ~/ROMs/SNES/* /sdcard/ROMs/SNES/
-adb push ~/ROMs/GBA/* /sdcard/ROMs/GBA/
-# etc.
+# Transfer ROMs via ADB
+adb push ~/ROMs/PS2/*.iso /sdcard/ROMs/PS2/
+adb push ~/ROMs/SNES/*.sfc /sdcard/ROMs/SNES/
 ```
 
-Or just drag and drop via file manager when connected in MTP mode.
+Or drag and drop via file manager in MTP mode.
 
 ---
 
-## Phase 7: Performance Tweaks Applied via ADB
+## Phase 8: Performance Tweaks
 
 ```bash
-# Reduce animations for snappier UI (0.5x instead of 1x)
+# Reduce animations (0.5x)
 adb shell settings put global animator_duration_scale 0.5
 adb shell settings put global transition_animation_scale 0.5
 adb shell settings put global window_animation_scale 0.5
 
-# Stay awake while charging (great for long gaming sessions)
+# Stay awake while charging
 adb shell settings put global stay_on_while_plugged_in 3
 
 # 10-minute screen timeout
@@ -288,314 +276,62 @@ adb shell settings put system screen_off_timeout 600000
 
 ---
 
-## Samsung DeX Support
+## Phase 9: Samsung DeX (Big Screen Gaming)
 
-Samsung DeX was **kept enabled** so the device can be connected to a monitor or TV for big-screen gaming. All emulators work in DeX mode.
+Samsung DeX is **kept enabled** for monitor/TV gaming. All emulators work in DeX.
 
-### How to Use DeX
-1. Connect the S23 Ultra to a monitor/TV via USB-C to HDMI adapter or Samsung DeX dock
-2. DeX mode launches automatically
-3. Pair a Bluetooth controller for the best experience
-4. Launch games from Daijisho or individual emulators
-
----
-
-## Installed Apps Summary
-
-| App | Package Name | Purpose |
-|-----|-------------|---------|
-| Aurora Store | `com.aurora.store` | Anonymous Google Play access |
-| F-Droid | `org.fdroid.fdroid` | Open source app store |
-| RetroArch | `com.retroarch.aarch64` | Multi-system emulator (17+ systems) |
-| Lemuroid | `com.swordfish.lemuroid` | Simplified multi-system emulator |
-| PPSSPP | `org.ppsspp.ppsspp` | PSP emulator |
-| Dolphin | `org.dolphinemu.dolphinemu` | GameCube / Wii emulator |
-| NetherSX2 | `xyz.aethersx2.android` | PS2 emulator |
-| Azahar (Lime3DS) | `io.github.lime3ds.android` | 3DS emulator |
-| Flycast | `com.flycast.emulator` | Dreamcast / Naomi emulator |
-| Daijisho | `com.magneticchen.daijishou` | Retro game launcher |
-| Citron | `org.citron.citron_emu` | Nintendo Switch emulator |
-| Minecraft | `com.mojang.minecraftpe` | Minecraft Bedrock Edition |
+1. USB-C to HDMI adapter or Samsung DeX dock
+2. DeX launches automatically
+3. Pair a Bluetooth controller
+4. Launch games from Daijisho or emulators directly
 
 ---
 
-## Troubleshooting
+## Phase 10: Privacy Hardening
 
-### Restore a Removed Package
-```bash
-adb shell cmd package install-existing <package.name>
-```
-
-### Full Factory Reset Restore
-All removed packages will be restored on factory reset since we used `pm uninstall -k --user 0` (user-level removal only).
-
-### ADB Not Detecting Device
-- Check USB cable supports data transfer (not charge-only)
-- Toggle USB Debugging off and on
-- Try a different USB port
-- Run `adb kill-server && adb start-server`
-
-### Emulator Running Slow
-- Close background apps
-- Enable **Performance mode** in Settings > Battery
-- In RetroArch: try different video drivers (Vulkan recommended for S23 Ultra)
-- In Dolphin: enable **Skip EFB Access from CPU**
-- In NetherSX2: try **Vulkan** renderer, enable **EE Recompiler** and **VU Recompiler**
-
-### Controller Not Working
-- Pair via Bluetooth in Settings
-- In each emulator, go to controller settings and map buttons
-- Xbox and PlayStation controllers work best
-- 8BitDo controllers are also excellent
-
----
-
-## Quick Reference: Debloat Package List
-
-<details>
-<summary>Click to expand full list of 129 removed packages</summary>
-
-### Facebook
-- `com.facebook.appmanager`
-- `com.facebook.katana`
-- `com.facebook.services`
-- `com.facebook.system`
-
-### Microsoft
-- `com.microsoft.appmanager`
-- `com.microsoft.skydrive`
-
-### Bixby
-- `com.samsung.android.bixby.agent`
-- `com.samsung.android.bixby.wakeup`
-- `com.samsung.android.bixbyvision.framework`
-- `com.samsung.android.app.settings.bixby`
-- `com.samsung.android.visionintelligence`
-
-### Samsung Apps
-- `com.samsung.android.app.tips`
-- `com.samsung.android.themestore`
-- `com.samsung.android.forest`
-- `com.samsung.android.game.gamehome`
-- `com.samsung.android.game.gametools`
-- `com.samsung.android.game.gos`
-- `com.samsung.android.stickercenter`
-- `com.samsung.android.aremoji`
-- `com.samsung.android.aremojieditor`
-- `com.samsung.android.app.camera.sticker.facearavatar.preload`
-- `com.samsung.android.ardrawing`
-- `com.samsung.android.app.dressroom`
-- `com.samsung.android.video`
-- `com.samsung.android.app.sharelive`
-- `com.samsung.android.smartmirroring`
-- `com.samsung.android.audiomirroring`
-- `com.samsung.android.app.watchmanagerstub`
-- `com.samsung.android.da.daagent`
-- `com.samsung.android.smartswitchassistant`
-- `com.samsung.android.app.reminder`
-- `com.samsung.android.calendar`
-- `com.samsung.android.app.routines`
-- `com.samsung.android.svcagent`
-- `com.samsung.android.spayfw`
-- `com.samsung.android.dynamiclock`
-- `com.samsung.android.app.clipboardedge`
-- `com.samsung.android.app.appsedge`
-- `com.samsung.android.app.taskedge`
-- `com.samsung.android.app.cocktailbarservice`
-- `com.samsung.android.widget.pictureframe`
-- `com.samsung.android.smartsuggestions`
-- `com.samsung.android.app.interpreter`
-- `com.samsung.android.app.readingglass`
-- `com.samsung.android.callassistant`
-- `com.samsung.android.visualars`
-- `com.samsung.android.visual.cloudcore`
-- `com.samsung.android.hdmapp`
-- `com.samsung.storyservice`
-- `com.samsung.petservice`
-- `com.samsung.mediasearch`
-- `com.samsung.videoscan`
-- `com.samsung.crane`
-- `com.samsung.gpuwatchapp`
-- `com.samsung.sait.sohservice`
-
-### Samsung Security & Knox
-- `com.samsung.android.samsungpassautofill`
-- `com.samsung.android.scloud`
-- `com.samsung.android.shortcutbackupservice`
-- `com.samsung.knox.securefolder`
-- `com.samsung.android.knox.analytics.uploader`
-- `com.samsung.android.knox.containercore`
-- `com.samsung.android.container`
-- `com.samsung.klmsagent`
-- `com.samsung.android.fmm`
-
-### Samsung System
-- `com.sec.android.desktopmode.uiservice` *(re-enabled for DeX)*
-- `com.samsung.android.smartcallprovider`
-- `com.samsung.android.smartface`
-- `com.samsung.android.smartface.overlay`
-- `com.samsung.android.singletake.service`
-- `com.samsung.android.wifi.ai`
-- `com.samsung.android.beaconmanager`
-- `com.sec.android.app.samsungapps`
-- `com.wsomacp`
-- `com.samsung.android.kidsinstaller`
-- `com.samsung.android.app.parentalcare`
-- `com.samsung.ssu`
-- `com.samsung.android.app.updatecenter`
-- `com.samsung.android.easysetup`
-- `com.samsung.android.app.kfa`
-- `com.samsung.android.dbsc`
-- `com.samsung.android.dqagent`
-- `com.samsung.android.gru`
-- `com.samsung.oda.service`
-- `com.samsung.android.bbc.bbcagent`
-- `com.samsung.android.ConnectivityOverlay`
-- `com.samsung.android.ConnectivityUxOverlay`
-- `com.samsung.android.globalpostprocmgr`
-- `com.samsung.cmh`
-- `com.samsung.android.dsms`
-- `com.samsung.android.app.dofviewer`
-- `com.samsung.app.newtrim`
-- `com.samsung.safetyinformation`
-- `com.samsung.android.bluelightfilter`
-- `com.samsung.android.brightnessbackupservice`
-- `com.samsung.android.sm.devicesecurity`
-
-### Samsung TTS Languages
-- `com.samsung.SMT.lang_de_de_f00`
-- `com.samsung.SMT.lang_es_es_f00`
-- `com.samsung.SMT.lang_es_mx_f00`
-- `com.samsung.SMT.lang_es_us_f00`
-- `com.samsung.SMT.lang_fr_fr_f00`
-- `com.samsung.SMT.lang_hi_in_f00`
-- `com.samsung.SMT.lang_it_it_f00`
-- `com.samsung.SMT.lang_pl_pl_f00`
-- `com.samsung.SMT.lang_pt_br_f00`
-- `com.samsung.SMT.lang_ru_ru_f00`
-- `com.samsung.SMT.lang_th_th_f00`
-- `com.samsung.SMT.lang_vi_vn_f00`
-
-### Google
-- `com.google.android.apps.googleassistant`
-- `com.google.android.projection.gearhead`
-- `com.google.android.apps.maps`
-- `com.google.android.apps.tachyon`
-- `com.google.android.feedback`
-
-</details>
-
----
-
----
-
-## Phase 7.5: Steam Gaming (Stream + Native x86)
-
-The S23 Ultra can run Steam games two ways:
-
-### Steam Link (Stream from your gaming PC)
-
-Stream your full Steam library from any gaming PC on your network. Zero performance overhead - the PC does the rendering, the phone just displays it.
+Getting as close to GrapheneOS as possible on Samsung hardware.
 
 ```bash
-# Install from Google Play Store (no direct APK available)
-adb shell am start -a android.intent.action.VIEW -d "market://details?id=com.valvesoftware.steamlink"
+./harden.sh                  # Full hardening (interactive DNS selection)
+./harden.sh --tracking-only  # Remove tracking packages only
+./harden.sh --dns-only       # Configure Private DNS only
+./harden.sh --settings-only  # Apply privacy settings only
+./harden.sh --audit          # Scan for remaining trackers
 ```
 
-Then tap **Install** on the phone. After installing:
-1. Open Steam Link on the phone
-2. Make sure your gaming PC has Steam running
-3. Both devices must be on the same network (5GHz WiFi recommended)
-4. Pair a Bluetooth controller for the best experience
-5. Works great with Samsung DeX on a monitor too
+### What Gets Hardened
 
-### Winlator (Run x86 Windows Games Locally)
+**Tracking packages removed (27+):**
 
-[Winlator](https://github.com/brunodev85/winlator) runs Windows x86/x64 games directly on the phone using Wine + Box86/Box64 translation. No PC required.
+| Category | What's Removed |
+|----------|---------------|
+| Samsung Analytics | Device Analytics, Rubin AI/ML, Diagnostic Monitor, Usage Reporter, Mobile Services |
+| Samsung Ads | Advertising ID, Ad ID service |
+| Google Telemetry | Mainline Telemetry, Ad Services, Android System Intelligence, Private Compute Services, Device Health |
+| Google Apps | YouTube, Search, TTS, Lens, Print Recommendations |
+| Samsung Spyware | Find My Mobile, Samsung Pass, Bixby (always-listening), Maps Agent, Push Service |
+| Third-party | Facebook services, Chrome Customizations |
 
-```bash
-wget -L "https://github.com/brunodev85/winlator/releases/download/v10.1.0/Winlator_10.1.apk" -O winlator.apk
-adb install winlator.apk
-```
-
-**What runs well on Snapdragon 8 Gen 2:**
-- Older/lighter Steam games (pre-2015 titles)
-- Source engine games (Half-Life 2, Portal)
-- Indie games, visual novels, older RPGs
-- GOG classics
-
-**What won't run well:**
-- AAA games from 2020+
-- Games requiring high-end GPU features
-- Games with aggressive DRM
-
-> **Note on Valve's ARM plans:** Valve is developing **FEX** (an x86-to-ARM translation layer) and **SteamOS for ARM** for their upcoming Steam Frame hardware (shipping 2026). This technology may eventually become available for other ARM devices, which would significantly improve Steam game compatibility on phones.
-
-### Installed Steam Apps
-
-| App | Package | Purpose |
-|-----|---------|---------|
-| Steam Link | `com.valvesoftware.steamlink` | Stream games from gaming PC |
-| Winlator | `com.winlator.FLAVOR` | Run x86 Windows games locally |
-
----
-
-## Phase 8: Privacy Hardening (Getting Close to GrapheneOS)
-
-Since GrapheneOS only supports Pixel devices, we can't install it on a Samsung. But we can get surprisingly close by stripping out tracking, telemetry, and analytics at the ADB level.
-
-### Run the Hardening Script
-
-```bash
-chmod +x harden.sh
-
-# Full hardening (interactive DNS selection)
-./harden.sh
-
-# Or run individual phases
-./harden.sh --tracking-only   # Remove tracking packages
-./harden.sh --dns-only        # Configure Private DNS
-./harden.sh --settings-only   # Apply privacy settings
-./harden.sh --audit           # Scan for remaining trackers
-```
-
-### What the Hardening Script Does
-
-#### 1. Removes Tracking Packages (28+ packages)
-
-| Category | Packages Removed |
-|----------|-----------------|
-| **Samsung Analytics** | Device Analytics Agent, Rubin AI/ML, Device Quality Agent, Diagnostic Monitor, Usage Reporter, Samsung Mobile Services |
-| **Samsung Ads** | Advertising ID, Ad ID service |
-| **Google Telemetry** | Mainline Telemetry, Ad Services, Android System Intelligence, Private Compute Services, Device Health Services, Config Updater, Partner Setup |
-| **Google Apps** | YouTube (use NewPipe instead), Google Search, Google TTS, Google Lens, Print Recommendations |
-| **Samsung Spyware** | Find My Mobile, Samsung Pass, Bixby (always-listening), Maps Agent, Push Service, Knox analytics |
-| **Third-party** | Facebook services, Chrome Customizations |
-
-#### 2. Configures Private DNS (DNS-over-TLS)
-
-Blocks ads, trackers, and adult content at the DNS level. Options include:
+**Private DNS (DNS-over-TLS):**
 
 | Provider | Hostname | Blocks |
 |----------|----------|--------|
-| **AdGuard Family** (recommended) | `family.adguard-dns.com` | Ads, trackers, adult content |
+| **AdGuard Family** (default) | `family.adguard-dns.com` | Ads, trackers, adult content |
 | AdGuard Default | `dns.adguard-dns.com` | Ads, trackers |
 | Mullvad Extended | `all.dns.mullvad.net` | Ads, trackers, malware, adult, gambling, social |
 | Cloudflare Families | `family.cloudflare-dns.com` | Malware, adult content |
 | Quad9 | `dns.quad9.net` | Malware |
 
-#### 3. Applies Privacy Settings
+**Privacy settings applied:**
+- Personalized ads disabled, ad tracking limited
+- Background WiFi/Bluetooth scanning disabled
+- Nearby device scanning disabled
+- Captive portal redirected away from Google (to kuketz.de)
+- Samsung error logging, marketing, analytics all disabled
+- Lock screen notification content hidden
+- ADB over WiFi disabled
 
-- **Disables personalized ads** and enables ad tracking limits
-- **Disables background WiFi/Bluetooth scanning** (used for location tracking)
-- **Disables nearby device scanning**
-- **Redirects captive portal checks** away from Google to a privacy-respecting server
-- **Disables Samsung error logging**, marketing push, experience improvement program, Knox analytics
-- **Hides lock screen notification content**
-- **Restricts background data** for all apps
-- **Disables ADB over WiFi** (security hardening)
-
-### Recommended Privacy Apps (Install from F-Droid)
+### Recommended F-Droid Privacy Apps
 
 | App | Purpose |
 |-----|---------|
@@ -603,36 +339,107 @@ Blocks ads, trackers, and adult content at the DNS level. Options include:
 | **Mull** | Privacy-hardened Firefox fork |
 | **NewPipe** | YouTube without Google tracking (great for kids) |
 | **Shelter** | Isolate apps in Android Work Profile |
-| **Organic Maps** | Offline maps, no tracking |
 
 ### Manual Steps on the Phone
 
-After running the script, also do these on the device itself:
-
-1. **Settings > Privacy > Customization Service** - Turn OFF all toggles
+1. **Settings > Privacy > Customization Service** - Turn OFF
 2. **Settings > Privacy > Send diagnostic data** - Turn OFF
 3. **Settings > Privacy > Ads** - Delete advertising ID, opt out
-4. **Settings > Location > Improve accuracy** - Turn OFF WiFi and Bluetooth scanning
-5. **Settings > Biometrics > More biometrics** - Turn OFF any Samsung Pass features
+4. **Settings > Location > Improve accuracy** - Turn OFF WiFi/BT scanning
 
-### How This Compares to GrapheneOS
+### GrapheneOS Comparison
 
 | Feature | GrapheneOS | Our Setup |
 |---------|-----------|-----------|
 | Custom hardened kernel | Yes | No (Samsung kernel) |
-| No Google services | Yes (optional sandboxed) | Partial (GMS still present for Play Store) |
-| DNS-level blocking | Manual config | Yes (AdGuard Family DNS) |
-| Tracker removal | N/A (never installed) | Yes (28+ packages removed via ADB) |
-| Telemetry disabled | By default | Yes (via ADB settings) |
-| Per-app firewall | Via apps | Yes (via RethinkDNS) |
-| Verified boot | Yes | Yes (Samsung Knox, but with Samsung keys) |
-| App sandboxing | Enhanced | Standard Android + Work Profile via Shelter |
-| OTA updates | AOSP-based | Samsung (may re-enable some trackers) |
+| No Google services | Yes (optional sandboxed) | Partial (GMS for Play Store) |
+| DNS-level blocking | Manual | Yes (AdGuard Family) |
+| Tracker removal | N/A (never installed) | 27+ packages removed |
+| Telemetry disabled | By default | Yes (via ADB) |
+| Per-app firewall | Via apps | Via RethinkDNS |
+| App sandboxing | Enhanced | Standard + Work Profile |
 
-> **After Samsung OTA updates:** Some removed packages may be reinstalled. Re-run `./harden.sh --tracking-only` after each system update.
+> **After OTA updates:** Re-run `./harden.sh --tracking-only` - Samsung may reinstall tracking packages.
+
+---
+
+## Installed Apps Summary
+
+| App | Package | Purpose |
+|-----|---------|---------|
+| Aurora Store | `com.aurora.store` | Anonymous Play Store |
+| F-Droid | `org.fdroid.fdroid` | Open source apps |
+| RetroArch | `com.retroarch.aarch64` | Multi-system emulator |
+| Lemuroid | `com.swordfish.lemuroid` | Simplified multi-system |
+| PPSSPP | `org.ppsspp.ppsspp` | PSP |
+| Dolphin | `org.dolphinemu.dolphinemu` | GameCube / Wii |
+| NetherSX2 | `xyz.aethersx2.android` | PS2 |
+| Azahar | `io.github.lime3ds.android` | 3DS |
+| Flycast | `com.flycast.emulator` | Dreamcast |
+| Citron | `org.citron.citron_emu` | Nintendo Switch |
+| Daijisho | `com.magneticchen.daijishou` | Game launcher (home screen) |
+| Winlator | `com.winlator.FLAVOR` | x86 Windows games |
+| Minecraft | `com.mojang.minecraftpe` | Minecraft Bedrock |
+| Steam Link | `com.valvesoftware.steamlink` | Stream from gaming PC |
+
+---
+
+## Known Issues
+
+### CRITICAL: Do NOT remove `com.google.android.ext.services`
+
+This is a **required Android system service** (`config_servicesExtensionPackage`). Removing it causes `PackageManagerService` to crash during boot, resulting in a bootloop that forces safe mode and eventually requires a factory reset.
+
+The `harden.sh` script has been patched to skip this package. If you're manually removing packages, **never remove `com.google.android.ext.services`**.
+
+**If you hit this bootloop:**
+1. Boot into recovery (Power + Volume Up)
+2. If ADB is available: `adb shell cmd package install-existing com.google.android.ext.services`
+3. If not: select "Erase app data" (factory reset) - all system packages will be restored
+
+### Factory Reset Behavior
+
+`pm uninstall -k --user 0` is user-level removal. A factory reset **restores all removed packages**. You'll need to re-run the scripts after a reset. That's exactly what they're designed for - the whole setup is repeatable.
+
+### Daijisho Shows No Games
+
+Daijisho doesn't auto-detect ROMs. You must add platforms manually:
+1. **Manage Platforms** > **+** > **Download from Index**
+2. Download each system
+3. Add **Sync Paths** pointing to `/sdcard/ROMs/<system>/`
+4. Tap **Sync**
+
+See [Phase 6](#phase-6-game-launcher-daijisho) for detailed steps.
+
+### Emulator Can't Find ROMs/BIOS
+
+Grant storage permission to the emulator:
+```bash
+adb shell pm grant <package.name> android.permission.READ_EXTERNAL_STORAGE
+```
+
+### ADB Not Detecting Device
+
+- Verify USB cable supports data (not charge-only)
+- Toggle USB Debugging off/on
+- `adb kill-server && adb start-server`
+
+### Emulator Performance Tips
+
+- Enable **Performance mode** in Settings > Battery
+- RetroArch: use **Vulkan** video driver
+- Dolphin: enable **Skip EFB Access from CPU**
+- NetherSX2: use **Vulkan** renderer, enable **EE/VU Recompiler**
+
+### Controller Setup
+
+- Pair via Bluetooth in Settings
+- Xbox and PlayStation controllers work best
+- 8BitDo controllers also excellent
+- Map buttons in each emulator's controller settings
 
 ---
 
 ## License
 
-This guide is provided as-is for educational purposes. Use at your own risk. ROMs must be legally obtained from games you own.
+This guide is provided as-is for educational purposes. Use at your own risk. ROMs and BIOS files must be legally obtained from hardware you own.
