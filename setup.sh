@@ -278,7 +278,13 @@ download_apks() {
         ["lemuroid.apk"]="https://github.com/Swordfish90/Lemuroid/releases/download/1.16.2/lemuroid-app-free-dynamic-release.apk"
         ["azahar-3ds.apk"]="https://github.com/azahar-emu/azahar/releases/download/2124.3/azahar-2124.3-android-vanilla.apk"
         ["citron-switch.apk"]="https://git.citron-emu.org/citron-emu/Citron/releases/download/2026.03.12/app-mainline-release.apk"
+        ["winlator.apk"]="https://github.com/brunodev85/winlator/releases/download/v10.1.0/Winlator_10.1.apk"
     )
+
+    # Steam Link must be installed from Play Store (no direct APK)
+    warn "Steam Link: Install from Google Play Store on the device"
+    warn "  Opening Play Store page now..."
+    adb shell am start -a android.intent.action.VIEW -d "market://details?id=com.valvesoftware.steamlink" 2>/dev/null
 
     for filename in "${!DOWNLOADS[@]}"; do
         local url="${DOWNLOADS[$filename]}"

@@ -489,6 +489,57 @@ All removed packages will be restored on factory reset since we used `pm uninsta
 
 ---
 
+## Phase 7.5: Steam Gaming (Stream + Native x86)
+
+The S23 Ultra can run Steam games two ways:
+
+### Steam Link (Stream from your gaming PC)
+
+Stream your full Steam library from any gaming PC on your network. Zero performance overhead - the PC does the rendering, the phone just displays it.
+
+```bash
+# Install from Google Play Store (no direct APK available)
+adb shell am start -a android.intent.action.VIEW -d "market://details?id=com.valvesoftware.steamlink"
+```
+
+Then tap **Install** on the phone. After installing:
+1. Open Steam Link on the phone
+2. Make sure your gaming PC has Steam running
+3. Both devices must be on the same network (5GHz WiFi recommended)
+4. Pair a Bluetooth controller for the best experience
+5. Works great with Samsung DeX on a monitor too
+
+### Winlator (Run x86 Windows Games Locally)
+
+[Winlator](https://github.com/brunodev85/winlator) runs Windows x86/x64 games directly on the phone using Wine + Box86/Box64 translation. No PC required.
+
+```bash
+wget -L "https://github.com/brunodev85/winlator/releases/download/v10.1.0/Winlator_10.1.apk" -O winlator.apk
+adb install winlator.apk
+```
+
+**What runs well on Snapdragon 8 Gen 2:**
+- Older/lighter Steam games (pre-2015 titles)
+- Source engine games (Half-Life 2, Portal)
+- Indie games, visual novels, older RPGs
+- GOG classics
+
+**What won't run well:**
+- AAA games from 2020+
+- Games requiring high-end GPU features
+- Games with aggressive DRM
+
+> **Note on Valve's ARM plans:** Valve is developing **FEX** (an x86-to-ARM translation layer) and **SteamOS for ARM** for their upcoming Steam Frame hardware (shipping 2026). This technology may eventually become available for other ARM devices, which would significantly improve Steam game compatibility on phones.
+
+### Installed Steam Apps
+
+| App | Package | Purpose |
+|-----|---------|---------|
+| Steam Link | `com.valvesoftware.steamlink` | Stream games from gaming PC |
+| Winlator | `com.winlator.FLAVOR` | Run x86 Windows games locally |
+
+---
+
 ## Phase 8: Privacy Hardening (Getting Close to GrapheneOS)
 
 Since GrapheneOS only supports Pixel devices, we can't install it on a Samsung. But we can get surprisingly close by stripping out tracking, telemetry, and analytics at the ADB level.
