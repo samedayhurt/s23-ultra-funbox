@@ -1,6 +1,11 @@
 # Samsung Galaxy S23 Ultra - Kid-Friendly Emulation Box Setup Guide
 
-Turn a Samsung Galaxy S23 Ultra into a dedicated emulation and gaming device for kids. This guide removes Samsung bloatware, installs emulators for 17+ retro systems, adds kid-friendly apps, and configures a game launcher as the home screen.
+Turn a Samsung Galaxy S23 Ultra into a dedicated, privacy-hardened emulation and gaming device for kids. This guide removes Samsung bloatware, strips tracking/telemetry, installs emulators for 17+ retro systems (including Nintendo Switch), adds kid-friendly apps, and configures a game launcher as the home screen.
+
+**Three scripts, one command each:**
+- `setup.sh` - Full setup: debloat, download emulators, install, configure launcher
+- `harden.sh` - Privacy hardening: remove trackers, configure DNS, lock down telemetry
+- `debloat.sh` - Standalone debloat script (subset of setup.sh)
 
 ## Prerequisites
 
@@ -119,19 +124,24 @@ adb install lemuroid.apk
 | **NetherSX2** | PS2 | Community builds (not officially distributed) |
 | **Azahar (Lime3DS)** | Nintendo 3DS | [GitHub](https://github.com/azahar-emu/azahar/releases) |
 | **Flycast** | Dreamcast / Naomi | [GitHub](https://github.com/flyinghead/flycast/releases) |
+| **Citron** | Nintendo Switch | [git.citron-emu.org](https://git.citron-emu.org/citron-emu/Citron/releases) |
 
 ```bash
 wget "https://www.ppsspp.org/files/1_20_3/ppsspp.apk" -O ppsspp.apk
 wget -L "https://dl.dolphin-emu.org/releases/2603a/dolphin-2603a.apk" -O dolphin.apk
 wget -L "https://github.com/azahar-emu/azahar/releases/download/2124.3/azahar-2124.3-android-vanilla.apk" -O azahar-3ds.apk
 wget -L "https://github.com/flyinghead/flycast/releases/download/v2.6/flycast-2.6.apk" -O flycast.apk
+wget -L "https://git.citron-emu.org/citron-emu/Citron/releases/download/2026.03.12/app-mainline-release.apk" -O citron-switch.apk
 
 adb install ppsspp.apk
 adb install dolphin.apk
 adb install azahar-3ds.apk
 adb install flycast.apk
+adb install citron-switch.apk
 adb install NetherSX2.apk  # Provide your own APK
 ```
+
+> **Note on Switch emulation:** Citron requires `prod.keys` and firmware files dumped from your own Nintendo Switch console. Place them in the Citron app's data directory. Without these files, games will not boot.
 
 ### Emulator Compatibility Chart (S23 Ultra - Snapdragon 8 Gen 2)
 
@@ -148,6 +158,7 @@ adb install NetherSX2.apk  # Provide your own APK
 | Wii | Good-Great | Dolphin |
 | PS2 | Good (many games) | NetherSX2 |
 | 3DS | Good (many games) | Azahar / Lime3DS |
+| Switch | Playable (many games) | Citron (requires keys + firmware from your Switch) |
 
 ---
 
@@ -216,6 +227,7 @@ ROMs go in `/sdcard/ROMs/` on the device:
 ├── PSX/
 ├── SNES/
 ├── Saturn/
+├── Switch/
 └── Wii/
 ```
 
@@ -274,6 +286,7 @@ Samsung DeX was **kept enabled** so the device can be connected to a monitor or 
 | Azahar (Lime3DS) | `io.github.lime3ds.android` | 3DS emulator |
 | Flycast | `com.flycast.emulator` | Dreamcast / Naomi emulator |
 | Daijisho | `com.magneticchen.daijishou` | Retro game launcher |
+| Citron | `org.citron.citron_emu` | Nintendo Switch emulator |
 | Minecraft | `com.mojang.minecraftpe` | Minecraft Bedrock Edition |
 
 ---
@@ -443,6 +456,101 @@ All removed packages will be restored on factory reset since we used `pm uninsta
 - `com.google.android.feedback`
 
 </details>
+
+---
+
+---
+
+## Phase 8: Privacy Hardening (Getting Close to GrapheneOS)
+
+Since GrapheneOS only supports Pixel devices, we can't install it on a Samsung. But we can get surprisingly close by stripping out tracking, telemetry, and analytics at the ADB level.
+
+### Run the Hardening Script
+
+```bash
+chmod +x harden.sh
+
+# Full hardening (interactive DNS selection)
+./harden.sh
+
+# Or run individual phases
+./harden.sh --tracking-only   # Remove tracking packages
+./harden.sh --dns-only        # Configure Private DNS
+./harden.sh --settings-only   # Apply privacy settings
+./harden.sh --audit           # Scan for remaining trackers
+```
+
+### What the Hardening Script Does
+
+#### 1. Removes Tracking Packages (28+ packages)
+
+| Category | Packages Removed |
+|----------|-----------------|
+| **Samsung Analytics** | Device Analytics Agent, Rubin AI/ML, Device Quality Agent, Diagnostic Monitor, Usage Reporter, Samsung Mobile Services |
+| **Samsung Ads** | Advertising ID, Ad ID service |
+| **Google Telemetry** | Mainline Telemetry, Ad Services, Android System Intelligence, Private Compute Services, Device Health Services, Config Updater, Partner Setup |
+| **Google Apps** | YouTube (use NewPipe instead), Google Search, Google TTS, Google Lens, Print Recommendations |
+| **Samsung Spyware** | Find My Mobile, Samsung Pass, Bixby (always-listening), Maps Agent, Push Service, Knox analytics |
+| **Third-party** | Facebook services, Chrome Customizations |
+
+#### 2. Configures Private DNS (DNS-over-TLS)
+
+Blocks ads, trackers, and adult content at the DNS level. Options include:
+
+| Provider | Hostname | Blocks |
+|----------|----------|--------|
+| **AdGuard Family** (recommended) | `family.adguard-dns.com` | Ads, trackers, adult content |
+| AdGuard Default | `dns.adguard-dns.com` | Ads, trackers |
+| Mullvad Extended | `all.dns.mullvad.net` | Ads, trackers, malware, adult, gambling, social |
+| Cloudflare Families | `family.cloudflare-dns.com` | Malware, adult content |
+| Quad9 | `dns.quad9.net` | Malware |
+
+#### 3. Applies Privacy Settings
+
+- **Disables personalized ads** and enables ad tracking limits
+- **Disables background WiFi/Bluetooth scanning** (used for location tracking)
+- **Disables nearby device scanning**
+- **Redirects captive portal checks** away from Google to a privacy-respecting server
+- **Disables Samsung error logging**, marketing push, experience improvement program, Knox analytics
+- **Hides lock screen notification content**
+- **Restricts background data** for all apps
+- **Disables ADB over WiFi** (security hardening)
+
+### Recommended Privacy Apps (Install from F-Droid)
+
+| App | Purpose |
+|-----|---------|
+| **RethinkDNS** | All-in-one firewall + DNS blocker + per-app network control |
+| **Mull** | Privacy-hardened Firefox fork |
+| **NewPipe** | YouTube without Google tracking (great for kids) |
+| **Shelter** | Isolate apps in Android Work Profile |
+| **Organic Maps** | Offline maps, no tracking |
+
+### Manual Steps on the Phone
+
+After running the script, also do these on the device itself:
+
+1. **Settings > Privacy > Customization Service** - Turn OFF all toggles
+2. **Settings > Privacy > Send diagnostic data** - Turn OFF
+3. **Settings > Privacy > Ads** - Delete advertising ID, opt out
+4. **Settings > Location > Improve accuracy** - Turn OFF WiFi and Bluetooth scanning
+5. **Settings > Biometrics > More biometrics** - Turn OFF any Samsung Pass features
+
+### How This Compares to GrapheneOS
+
+| Feature | GrapheneOS | Our Setup |
+|---------|-----------|-----------|
+| Custom hardened kernel | Yes | No (Samsung kernel) |
+| No Google services | Yes (optional sandboxed) | Partial (GMS still present for Play Store) |
+| DNS-level blocking | Manual config | Yes (AdGuard Family DNS) |
+| Tracker removal | N/A (never installed) | Yes (28+ packages removed via ADB) |
+| Telemetry disabled | By default | Yes (via ADB settings) |
+| Per-app firewall | Via apps | Yes (via RethinkDNS) |
+| Verified boot | Yes | Yes (Samsung Knox, but with Samsung keys) |
+| App sandboxing | Enhanced | Standard Android + Work Profile via Shelter |
+| OTA updates | AOSP-based | Samsung (may re-enable some trackers) |
+
+> **After Samsung OTA updates:** Some removed packages may be reinstalled. Re-run `./harden.sh --tracking-only` after each system update.
 
 ---
 
