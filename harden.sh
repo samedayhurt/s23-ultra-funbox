@@ -125,7 +125,8 @@ remove_tracking() {
         "com.google.android.adservices.api"           # Google Ad Services
         "com.google.mainline.adservices"              # Mainline Ad Services
         "com.google.mainline.telemetry"               # Google Mainline Telemetry
-        "com.google.android.ext.services"             # Ext Services (ad ML)
+        # DO NOT REMOVE: com.google.android.ext.services - CAUSES BOOTLOOP
+        # It's a required system service (config_servicesExtensionPackage)
         "com.google.android.gms.policy_sidecar_aps"  # GMS Policy Sidecar
         "com.google.android.feedback"                 # Google Feedback
         "com.google.android.apps.wellbeing"           # Digital Wellbeing (telemetry)
